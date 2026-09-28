@@ -1,19 +1,9 @@
 {
-  "name": "kali-ni-tidi-mobile",
+  "name": "kali-ni-tidi-online",
   "version": "1.0.0",
-  "private": true,
-  "description": "Native Android and iOS shell for Kali Ni Tidi",
-  "scripts": {
-    "sync": "cap sync",
-    "android": "cap open android",
-    "ios": "cap open ios"
-  },
-  "dependencies": {
-    "@capacitor/android": "^6.0.0",
-    "@capacitor/core": "^6.0.0",
-    "@capacitor/ios": "^6.0.0"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^6.0.0"
-  }
+  "description": "Kali Ni Tidi (3 of spades) with room codes for friends and family",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
 }
