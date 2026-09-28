@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kali Ni Tidi</title>
+<meta name="theme-color" content="#0d2124">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kali Ni Tidi">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Hind:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#0d2124; --table:#173a3f; --panel:rgba(6,20,22,.55);
+  --ivory:#f8f1e1; --cardink:#17161a; --red:#b3202a; --gold:#f0a51f; --goldink:#2a1a00;
+  --rim:#3a2416; --cream:#f3ead8; --muted:#a4bab8; --line:rgba(243,234,216,.18);
+  --display:'Yatra One',Georgia,'Times New Roman',serif;
+  --body:'Hind',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --page:#091a1c; --table:#123135; }
+}
+:root[data-theme="dark"]{ --page:#091a1c; --table:#123135; }
+html{overscroll-behavior:none;scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;min-height:100%}
+body{background:var(--page);color:var(--cream);font-family:var(--body);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button{touch-action:manipulation;-webkit-touch-callout:none;font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.app{max-width:1000px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px;min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{font-family:var(--display);font-size:1.4rem;letter-spacing:.01em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.88rem;color:var(--cream);background:var(--panel)}
+.chip b{font-weight:700}
+.rs{color:#ff7d86}
+
+.btn{border:1px solid var(--line);background:transparent;border-radius:10px;padding:9px 16px;font-weight:600}
+.btn.primary{background:var(--gold);color:var(--goldink);border-color:var(--gold)}
+.btn.primary:disabled{opacity:.4;cursor:not-allowed}
+.btn.small{padding:5px 12px;font-size:.9rem}
+
+.table{background:radial-gradient(120% 90% at 50% 40%,var(--table) 0%,var(--page) 130%);border:1px solid var(--line);border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:12px}
+.seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px}
+.seat{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--panel);min-height:78px}
+.seat.turn{border-color:var(--gold);box-shadow:0 0 0 2px rgba(240,165,31,.28)}
+.seat .nm{font-family:var(--display);font-size:1.05rem}
+.seat .stats{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:.82rem;color:var(--muted)}
+.badges{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0}
+.badge{background:var(--gold);color:var(--goldink);border-radius:6px;padding:0 6px;font-size:.75rem;font-weight:700}
+.seat .st{font-size:.85rem;color:var(--gold);min-height:1.2em}
+
+.felt{position:relative;width:100%;height:clamp(430px,68vw,580px)}
+.felt .oval{position:absolute;inset:12% 9%;border-radius:50%;background:radial-gradient(closest-side,var(--table) 0%,var(--page) 135%);border:10px solid var(--rim);box-shadow:inset 0 0 44px rgba(0,0,0,.5),0 8px 20px rgba(0,0,0,.4)}
+.felt .pos{position:absolute;transform:translate(-50%,-50%)}
+.felt .seat{width:clamp(96px,26vw,132px);min-height:0;padding:6px 8px;background:rgba(6,20,22,.9)}
+.felt .seat .nm{font-size:.98rem}
+.felt .seat .stats{flex-direction:column;gap:0;font-size:.76rem}
+.felt .seat .badges{margin:1px 0}
+.felt .tcard{--cw:clamp(40px,8.5vw,62px);z-index:2}
+.felt .tcard.win .card{box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.4)}
+.felt .tcard.new .card{animation:drop .28s ease-out}
+.felt .mid-hint{z-index:1;text-align:center;max-width:9em;color:var(--muted);font-size:.9rem}
+.center{display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0}
+.trick{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;min-height:calc(clamp(44px,10vw,64px)*1.42 + 26px);align-items:flex-start;--cw:clamp(44px,10vw,64px)}
+.tslot{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tslot .who{font-size:.8rem;color:var(--muted)}
+.tslot.win .who{color:var(--gold);font-weight:700}
+.tslot.win .card{box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.4)}
+.tslot.new .card{animation:drop .28s ease-out}
+@keyframes drop{from{transform:translateY(-16px) scale(.96);opacity:0}}
+.hint{color:var(--muted);margin:0;align-self:center}
+.msg{margin:0;text-align:center;font-size:1.02rem;min-height:1.5em}
+.secret{margin:0;text-align:center;font-size:.9rem;color:var(--gold)}
+
+.panel{width:100%;max-width:640px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.panel p{margin:0}
+.panel h2{margin:0;font-family:var(--display);font-weight:400;font-size:1.5rem}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bidctl{display:flex;align-items:center;gap:12px}
+.bidctl input[type=range]{flex:1;accent-color:var(--gold);min-width:0}
+.bidctl output{font-family:var(--display);font-size:1.8rem;min-width:3ch;text-align:right}
+.suitpick{display:flex;flex-wrap:wrap;gap:8px}
+.suitbtn{border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:10px;padding:6px 12px;font-weight:600}
+.suitbtn.sel{background:var(--gold);color:var(--goldink);border-color:var(--gold)}
+.suitbtn .r{color:#ff7d86}.suitbtn.sel .r{color:var(--red)}
+.pickrows{display:flex;flex-direction:column;gap:6px}
+.pickrow{display:flex;flex-wrap:wrap;gap:4px}
+.mini{min-width:2.5em;padding:3px 5px;border-radius:6px;background:var(--ivory);color:var(--cardink);border:1px solid rgba(0,0,0,.3);font-weight:700;font-size:.9rem;text-align:center;line-height:1.25}
+.mini.red{color:var(--red)}
+button.mini.sel{background:var(--gold);outline:2px solid var(--goldink)}
+.mini.kali{box-shadow:0 0 0 2px var(--gold)}
+.mini.static{display:inline-block}
+.mini small{display:block;font-size:.62rem;font-weight:600;line-height:1.1}
+.mini.pat{border-style:dashed;border-color:var(--gold)}
+table.sc{border-collapse:collapse;width:100%;font-size:.95rem}
+table.sc th,table.sc td{padding:4px 6px;text-align:left;border-bottom:1px solid var(--line)}
+table.sc td.n,table.sc th.n{text-align:right}
+
+.me{display:flex;flex-direction:column;gap:2px}
+.me .seat{min-height:0;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.hand{display:flex;justify-content:center;padding:16px 6px 4px;--cw:clamp(30px,calc((100vw - 40px) / (1 + (var(--n,12) - 1) * .48)),76px)}
+.hand.row2{padding-top:4px;padding-bottom:8px}
+.hand .card + .card{margin-left:calc(var(--cw) * -.52)}
+.hand .card{transition:transform .12s}
+.hand .card.ok{cursor:pointer;transform:translateY(-8px)}
+.hand .card.ok:hover,.hand .card.ok:focus-visible{transform:translateY(-16px);z-index:5}
+.hand .card.dim{filter:brightness(.55);cursor:not-allowed}
+
+.card{--w:var(--cw,64px);width:var(--w);height:calc(var(--w)*1.42);flex:none;position:relative;padding:0;text-align:left;
+  background:var(--ivory);color:var(--cardink);border:1px solid rgba(0,0,0,.28);border-radius:calc(var(--w)*.12);
+  box-shadow:0 2px 6px rgba(0,0,0,.4);font-family:var(--body);font-weight:700;user-select:none;-webkit-user-select:none}
+.card.red{color:var(--red)}
+.card .tl{position:absolute;top:4%;left:9%;font-size:calc(var(--w)*.3);line-height:1;display:flex;flex-direction:column;align-items:center}
+.card .tl i{font-style:normal;font-size:.95em}
+.card .mid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--w)*.62);padding:14% 0 0 22%}
+.card .pt{position:absolute;left:8%;bottom:5%;font-size:calc(var(--w)*.2);line-height:1.5;background:var(--gold);color:var(--goldink);border-radius:999px;padding:0 .4em}
+.card.kali{border:2px solid var(--gold);box-shadow:0 0 0 2px rgba(240,165,31,.35),0 2px 8px rgba(0,0,0,.45)}
+
+.menu{display:flex;flex-direction:column;gap:26px;padding:22px 4px}
+.hero{display:flex;flex-wrap:wrap;align-items:center;gap:32px 44px}
+.card.big{--cw:clamp(150px,40vw,230px);transform:rotate(-5deg);flex:none;margin:8px 14px}
+.card.big .pt{font-size:calc(var(--w)*.16)}
+.hero h1{font-family:var(--display);font-weight:400;font-size:clamp(2.5rem,8vw,4.4rem);line-height:1;margin:0 0 12px}
+.hero p{margin:0;max-width:34ch;font-size:1.1rem;color:var(--muted)}
+.setup{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:8px 18px;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--gold);color:var(--goldink)}
+.rules{max-width:62ch;border-top:1px solid var(--line);padding-top:12px}
+.rules summary{cursor:pointer;font-weight:600}
+.rules ul{padding-left:1.2em;margin:10px 0 0;display:flex;flex-direction:column;gap:6px}
+.note{color:var(--muted);font-size:.9rem;margin:0}
+
+@media (max-width:520px){
+  .felt{height:470px}
+  .felt .oval{inset:13% 6%;border-width:8px}
+  .app{padding:8px}
+  .table{padding:8px;border-radius:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+
+.fld{display:flex;flex-direction:column;gap:4px;max-width:320px}
+input[type=text],input:not([type]),.codein{font:inherit;color:var(--cream);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
+.codein{text-transform:uppercase;letter-spacing:.3em;font-family:var(--display);font-size:1.4rem;width:8ch;text-align:center}
+.split{display:flex;flex-wrap:wrap;gap:24px 40px}
+.col{display:flex;flex-direction:column;gap:10px;align-items:flex-start;max-width:340px}
+.seg.vert{flex-direction:column;align-items:stretch}
+.seg.vert button{text-align:left}
+.lobby{display:flex;flex-direction:column;gap:16px;max-width:520px;margin:12px auto;width:100%}
+.roomcode{font-family:var(--display);font-size:clamp(3rem,14vw,5rem);letter-spacing:.14em;line-height:1;color:var(--gold)}
+.plist{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--line);padding-top:10px}
+.prow{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--line)}
+.err{color:#ff9aa1;margin:0}
+.install{border:1px dashed var(--gold);border-radius:12px;padding:10px 14px;max-width:420px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.voicebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.videobar{display:flex;flex-direction:column;gap:8px}.videogrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.videoTile{position:relative;width:74px;height:54px;background:#081416;border:1px solid var(--line);border-radius:7px;overflow:hidden;flex:0 0 auto}.videoTile video{width:100%;height:100%;object-fit:cover;display:block}.videoTile .vname{position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.7);padding:1px 4px;border-radius:4px;font-size:.62rem;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.videoTile.me video{transform:scaleX(-1)}.seatVideo{position:absolute;right:7px;top:7px;z-index:3}.seat.hasVideo .nm,.seat.hasVideo .stats,.seat.hasVideo .badges,.seat.hasVideo .st,.seat.hasVideo>.note{padding-right:82px}.seat.hasVideo{min-height:92px}
+.voicebar .err{font-size:.85rem}
+.seat.speaking,.prow.speaking{box-shadow:0 0 0 3px #5fd38d}
+.prow.speaking{border-radius:6px}
+.toast{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--gold);color:var(--goldink);border-radius:999px;padding:6px 16px;font-weight:600;z-index:20}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="voiceAudio" style="display:none" aria-hidden="true"></div>
+<script>
+(function(){
+'use strict';
+
+/* ---------- constants ---------- */
+var SUITS=['S','H','D','C'];
+var SYM={S:'\u2660\uFE0E',H:'\u2665\uFE0E',D:'\u2666\uFE0E',C:'\u2663\uFE0E'};
+var SNAME={S:'Spades',H:'Hearts',D:'Diamonds',C:'Clubs'};
+var RL={2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+var MODES={s4:'Single deck, 4 players',s5:'Single deck, 5 players',d6:'Double deck, 6 players'};
+var MODE_NOTE={
+  s4:'One deck less the 2s: 48 cards, 12 each. 250 points, bids from 150 to 250, one partner card.',
+  s5:'One deck less the 2 of clubs and 2 of diamonds: 50 cards, 10 each. 250 points, bids from 150 to 250, two partner cards.',
+  d6:'Two decks less a 2 of clubs and a 2 of diamonds: 102 cards, 17 each. 500 points, bids from 250 to 500, two partner cards.'
+};
+
+function pts(c){return (c.s==='S'&&c.r===3)?30:(c.r>=10?10:(c.r===5?5:0));}
+function fromFace(f){return {s:f.slice(-1),r:parseInt(f,10),f:f,id:f+'a'};}
+function isRed(s){return s==='H'||s==='D';}
+function sum(a,f){return a.reduce(function(t,x){return t+f(x);},0);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function sgn(n){return (n>0?'+':'')+n;}
+
+var $app=document.getElementById('app');
+var S={V:null,es:null,name:'',code:'',mode:'s4',err:'',reconnecting:false,myBid:0,pick:{trump:null,cards:[]},lastPhaseKey:''};
+
+/* ---------- session storage ---------- */
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}catch(e){}}
+function session(){try{return JSON.parse(lsGet('kt_session')||'null');}catch(e){return null;}}
+function saveSession(s){lsSet('kt_session',s?JSON.stringify(s):null);}
+
+/* ---------- network ---------- */
+function post(path,body){
+  return fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return {error:'Unexpected reply from the server'};});})
+    .catch(function(){return {error:'Cannot reach the server. Check your connection.'};});
+}
+function act(type,extra){
+  var s=session();if(!s)return;
+  post('/api/act',Object.assign({room:s.room,pid:s.pid,type:type},extra||{})).then(function(r){
+    if(r&&r.error){S.err=r.error;render();}
+  });
+}
+function disconnect(){if(S.es){S.es.close();S.es=null;}}
+function connect(){
+  disconnect();
+  var s=session();if(!s)return;
+  var es=new EventSource('/api/events?room='+encodeURIComponent(s.room)+'&pid='+encodeURIComponent(s.pid));
+  S.es=es;
+  es.addEventListener('signal',function(e){try{var m=JSON.parse(e.data); if(String(m.kind||'').indexOf('video-')===0) handleVideoSignal(m); else handleSignal(m);}catch(x){}});
+  es.onmessage=function(e){
+    S.reconnecting=false;S.err='';
+    try{S.V=JSON.parse(e.data);}catch(x){return;}
+    render();syncVoice(S.V);syncVideo(S.V);
+  };
+  es.onerror=function(){
+    if(es.readyState===2){leaveLocal('That room is no longer available.');}
+    else{S.reconnecting=true;render();}
+  };
+}
+function leaveLocal(msg){
+  voiceLeave(false);videoLeave(false);
+  disconnect();saveSession(null);S.V=null;S.err=msg||'';S.reconnecting=false;
+  history.replaceState(null,'',location.pathname);
+  render();
+}
+function enter(r,name){
+  if(r.error){S.err=r.error;render();return;}
+  saveSession({room:r.room,pid:r.pid,name:name});
+  lsSet('kt_name',name);
+  history.replaceState(null,'','?room='+r.room);
+  S.err='';connect();
+}
+
+/* ---------- cards ---------- */
+function cardHTML(c,o){
+  o=o||{};
+  var tag=o.tag||'div',p=pts(c);
+  var cls=['card',isRed(c.s)?'red':'',(c.s==='S'&&c.r===3)?'kali':'',o.cls||''].join(' ');
+  return '<'+tag+' class="'+cls+'" '+(o.attrs||'')+' aria-label="'+RL[c.r]+' of '+SNAME[c.s]+(p?', '+p+' points':'')+'">'
+    +'<span class="tl"><span>'+RL[c.r]+'</span><i>'+SYM[c.s]+'</i></span>'
+    +'<span class="mid">'+SYM[c.s]+'</span>'
+    +(p?'<span class="pt">'+p+'</span>':'')
+    +'</'+tag+'>';
+}
+function miniHTML(c,o){
+  o=o||{};
+  var cls='mini '+(isRed(c.s)?'red ':'')+((c.s==='S'&&c.r===3)?'kali ':'')+(o.sel?'sel ':'')+(o.pat?'pat ':'');
+  var tag=o.pat?'<small>pattern copy</small>':'';
+  if(o.btn)return '<button type="button" class="'+cls+'" data-action="pick" data-v="'+c.f+'" aria-pressed="'+(!!o.sel)+'" title="'+(o.sel?'Tap again to deselect':'Tap to select')+'" aria-label="'+RL[c.r]+' of '+SNAME[c.s]+(o.pat?', pattern copy: you hold one, the other copy is your partner':'')+'">'+RL[c.r]+SYM[c.s]+tag+'</button>';
+  return '<span class="'+cls+'static">'+RL[c.r]+SYM[c.s]+tag+'</span>';
+}
+function suitTxt(s){return '<span class="'+(isRed(s)?'rs':'')+'">'+SYM[s]+' '+SNAME[s]+'</span>';}
+
+/* ---------- home and lobby ---------- */
+function homeHTML(){
+  return '<div class="menu">'
+   +'<div class="hero">'+cardHTML({s:'S',r:3,f:'3S',id:'3Sa'},{cls:'big'})
+   +'<div><h1>Kali Ni Tidi</h1><p>The 3 of spades is worth 30 points. Make a room, share the code, and play with friends and family. Empty seats are filled by computer players.</p></div></div>'
+   +'<div class="setup">'
+   +'<label class="fld"><span class="note">Your name</span><input id="nameIn" maxlength="14" autocomplete="nickname" value="'+esc(S.name)+'" placeholder="Name shown to others"></label>'
+   +'<div class="split">'
+   +'<div class="col"><b>Start a new room</b><div class="seg vert" role="group" aria-label="Game type">'
+   +Object.keys(MODES).map(function(k){return '<button type="button" data-action="mode0" data-v="'+k+'" aria-pressed="'+(S.mode===k)+'">'+MODES[k]+'</button>';}).join('')
+   +'</div><p class="note">'+MODE_NOTE[S.mode]+'</p><button type="button" class="btn primary" data-action="create">Create room</button></div>'
+   +'<div class="col"><b>Join with a code</b><input id="codeIn" class="codein" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false" value="'+esc(S.code)+'" placeholder="ABCD" aria-label="Room code">'
+   +'<button type="button" class="btn primary" data-action="join">Join room</button></div>'
+   +'</div>'
+   +(S.err?'<p class="err" role="alert">'+esc(S.err)+'</p>':'')
+   +installHTML()
+   +'</div></div>';
+}
+function installHTML(){
+  if(isStandalone())return '';
+  if(S.installEvt)return '<div class="install"><span>Add Kali Ni Tidi to your home screen to play it like an app.</span><button type="button" class="btn small primary" data-action="install">Install app</button></div>';
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent))return '<div class="install"><span>To install on iPhone or iPad: tap the Share button in Safari, then Add to Home Screen.</span></div>';
+  return '';
+}
+function isStandalone(){return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
+function lobbyHTML(){
+  var V=S.V,link=location.origin+'/?room='+V.code;
+  var empty=V.n-V.players.length;
+  return '<div class="topbar"><div class="brand">Kali Ni Tidi</div><button type="button" class="btn small" data-action="leave">Leave room</button></div>'
+   +'<div class="lobby"><div><div class="note">Room code</div><div class="roomcode" aria-label="Room code '+V.code.split('').join(' ')+'">'+V.code+'</div></div>'
+   +'<div class="row"><button type="button" class="btn primary" data-action="copy">Copy invite link</button><span class="note" id="copied"></span></div>'
+   +'<p class="note">Friends open the link, or go to the site and type the code.</p>'
+   +voiceBarHTML()
+   +videoBarHTML()
+   +'<div class="plist"><b>At the table ('+V.players.length+' of '+V.n+')</b>'
+   +V.players.map(function(p){return '<div class="prow" data-uid="'+p.uid+'"><span>'+esc(p.name)+(p.me?' (you)':'')+'</span><span>'+(p.host?'<span class="badge">Host</span> ':'')+(p.online?'':'<span class="note">offline</span>')+'</span></div>';}).join('')
+   +(empty>0?'<p class="note">'+empty+' empty seat'+(empty>1?'s':'')+' will be filled by computer players. People can also join after the game starts and take over a computer seat.</p>':'')
+   +'</div>'
+   +(V.isHost
+     ?'<div class="col"><b>Game type</b><div class="seg vert" role="group" aria-label="Game type">'
+       +Object.keys(MODES).map(function(k){return '<button type="button" data-action="mode" data-v="'+k+'" aria-pressed="'+(V.mode===k)+'">'+MODES[k]+'</button>';}).join('')
+       +'</div><p class="note">'+MODE_NOTE[V.mode]+'</p><button type="button" class="btn primary" data-action="start">Deal the cards</button></div>'
+     :'<p>Waiting for the host to start the game. '+MODES[V.mode]+'.</p>')
+   +(S.err?'<p class="err" role="alert">'+esc(S.err)+'</p>':'')
+   +'</div>';
+}
+
+/* ---------- game ---------- */
+function nm(i){return S.V.names[i];}
+function seatPos(rel,rx,ry){
+  var V=S.V,a=(90+rel*360/V.n)*Math.PI/180;
+  return 'left:'+(50+rx*Math.cos(a)).toFixed(2)+'%;top:'+(50+ry*Math.sin(a)).toFixed(2)+'%';
+}
+function seatRx(){
+  var w=Math.min(window.innerWidth-16,1000),half=Math.min(132,Math.max(96,.26*window.innerWidth))/2;
+  return Math.min(41,50-(half+4)/w*100);
+}
+function rel(i){var V=S.V;return (i-V.me+V.n)%V.n;}
+function holdsCalled(){
+  var V=S.V;
+  return V.called.some(function(c){return c.by===null&&V.hand.some(function(h){return h.f===c.f;});});
+}
+function seatHTML(i){
+  var V=S.V,turn=V.acting===i,hasVideo=(V.video||[]).indexOf(V.uids[i])>=0;
+  var badges=[];
+  if(V.bidder===i&&V.phase!=='bid')badges.push('Bidder');
+  if(V.revealed.indexOf(i)>=0)badges.push('Partner');
+  if(i===V.me&&V.phase==='play'&&V.bidder!==V.me&&V.revealed.indexOf(i)<0&&holdsCalled())badges.push(V.decks===2?'Called card':'Secret partner');
+  var st='';
+  if(V.phase==='bid'){var l=V.bid.last[i];st=l==='Pass'?'Passed':(l?'Bid '+l:(V.bid.turn===i?'Deciding':''));}
+  var tag=i===V.me?'':(V.kinds[i]==='bot'?'<span class="note">Computer</span>':(V.online[i]?'':'<span class="note">Offline, computer covering</span>'));
+  var sc=V.scores[i];
+  return '<div class="seat'+(turn?' turn':'')+(hasVideo?' hasVideo':'')+'"'+(V.uids[i]?' data-uid="'+V.uids[i]+'"':'')+'>'
+    +(hasVideo?'<div class="seatVideo" data-video-slot="'+V.uids[i]+'"></div>':'')
+    +'<div class="nm">'+esc(i===V.me?'You':nm(i))+'</div>'
+    +(i===V.me?'<div class="note">'+esc(nm(i))+'</div>':tag)
+    +'<div class="badges">'+badges.map(function(b){return '<span class="badge">'+b+'</span>';}).join('')+'</div>'
+    +(V.phase==='bid'?'<div class="st">'+st+'</div>':'')
+    +'<div class="stats"><span>'+V.counts[i]+' cards</span><span>'+V.taken[i]+' pts won</span><span>Total '+sgn(sc)+'</span></div></div>';
+}
+function chipsHTML(){
+  var V=S.V,c=['<span class="chip">Room <b>'+V.code+'</b></span>','<span class="chip">Round '+V.round+'</span>'];
+  if(V.bid.amount&&V.phase!=='bid')c.push('<span class="chip">Bid <b>'+V.bid.amount+'</b> by '+esc(nm(V.bidder))+'</span>');
+  else if(V.bid.amount)c.push('<span class="chip">High bid <b>'+V.bid.amount+'</b> by '+esc(nm(V.bid.by))+'</span>');
+  if(V.trump)c.push('<span class="chip">Trump <b>'+suitTxt(V.trump)+'</b></span>');
+  V.called.forEach(function(cc){
+    c.push('<span class="chip">Partner card '+miniHTML(fromFace(cc.f))+' '+(V.decks===2?(cc.pattern?'pattern copy (bidder holds one)':(cc.n===1?'first copy':'second copy'))+', ':'')+(cc.by!==null?(cc.by===V.bidder?'bidder played it':'played by '+esc(nm(cc.by))):'hidden')+'</span>');
+  });
+  if(V.phase==='play'||V.phase==='trickEnd'){
+    var side=V.taken[V.bidder]+sum(V.revealed,function(i){return V.taken[i];});
+    c.push('<span class="chip">Bidding side (known) <b>'+side+'</b> of '+V.bid.amount+'</span>');
+  }
+  return c.join('');
+}
+function tableHTML(){
+  var V=S.V,h='<div class="oval"></div>';
+  if(!V.trick.length){
+    var t=V.phase==='play'?esc(V.turn===V.me?'You':nm(V.turn))+(V.turn===V.me?' lead':' leads'):(V.phase==='end'?'All tricks played':'');
+    if(t)h+='<div class="pos mid-hint" style="left:50%;top:50%">'+t+'</div>';
+  }
+  for(var i=0;i<V.n;i++)h+='<div class="pos" style="'+seatPos(rel(i),seatRx(),38)+'">'+seatHTML(i)+'</div>';
+  V.trick.forEach(function(e,k){
+    h+='<div class="pos tcard'+(V.phase==='trickEnd'&&e.p===V.winner?' win':'')+(k===V.trick.length-1&&V.phase==='play'?' new':'')+'" style="'+seatPos(rel(e.p),20,18)+'">'+cardHTML(e.card)+'</div>';
+  });
+  return h;
+}
+function messageText(){
+  var V=S.V,mine=function(i){return i===V.me;};
+  switch(V.phase){
+    case 'bid':return mine(V.bid.turn)?'Your turn to bid.':nm(V.bid.turn)+' is deciding.';
+    case 'finalBid':return mine(V.bidder)?'You won the bidding. You have one final chance to increase your bid.':nm(V.bidder)+' has one final chance to increase the bid.';
+    case 'call':return mine(V.bidder)?'You won the bid. Pick your trump and partner card'+(V.pc>1?'s':'')+'.':nm(V.bidder)+' won the bid at '+V.bid.amount+' and is choosing trump and partners.';
+    case 'play':
+      if(!mine(V.turn))return nm(V.turn)+' is playing.';
+      if(!V.trick.length)return 'You lead. Play any card.';
+      var led=V.trick[0].card.s,has=V.hand.some(function(c){return c.s===led;});
+      return has?'Your turn. Follow '+SNAME[led]+'.':'Your turn. You have no '+SNAME[led]+', so play any card.';
+    case 'trickEnd':return (mine(V.winner)?'You take':nm(V.winner)+' takes')+' the trick'+(V.trickPts?' and '+V.trickPts+' points.':'.');
+    case 'end':return V.result.ok?'The bidding side made its bid.':'The bidding side fell short.';
+  }
+  return '';
+}
+function panelHTML(){
+  var V=S.V,b=V.bid;
+  if(V.phase==='bid'&&b.turn===V.me){
+    var min=b.amount?b.amount+5:V.minBid,v=Math.min(V.maxCap,Math.max(S.myBid||0,min));
+    S.myBid=v;
+    return '<div class="panel"><p>Your hand holds <b>'+sum(V.hand,pts)+'</b> of the '+V.total+' points.</p>'
+      +'<p>'+(b.amount?'Highest bid is '+b.amount+' by '+esc(nm(b.by))+'.':'Nobody has bid yet. Bidding starts at '+V.minBid+', and if everyone passes the last player must take it.')+'</p>'
+      +'<div class="bidctl"><input type="range" id="bidRange" min="'+min+'" max="'+V.maxCap+'" step="5" value="'+v+'" aria-label="Your bid"><output id="bidVal">'+v+'</output></div>'
+      +'<div class="row"><button type="button" class="btn primary" data-action="bid" id="bidBtn">Bid '+v+'</button><button type="button" class="btn" data-action="pass">Pass</button></div></div>';
+  }
+  if(V.phase==='finalBid'&&V.bidder===V.me){
+    var fv=Math.min(V.maxCap,Math.max(V.bid.amount+5,S.myBid||V.bid.amount+5));
+    S.myBid=fv;
+    return '<div class="panel"><h3>Final bid increase</h3><p>Everyone else has passed. Your current bid is <b>'+V.bid.amount+'</b>.</p>'
+      +'<p>You have <b>one opportunity</b> to increase your bid. You can also keep your current bid.</p>'
+      +'<div class="bidctl"><input type="range" id="bidRange" min="'+(V.bid.amount+5)+'" max="'+V.maxCap+'" step="5" value="'+fv+'" aria-label="Final bid"><output id="bidVal">'+fv+'</output></div>'
+      +'<div class="row"><button type="button" class="btn primary" data-action="finalBid">Increase to '+fv+'</button><button type="button" class="btn" data-action="keepBid">Keep '+V.bid.amount+'</button></div></div>';
+  }
+  if(V.phase==='call'&&V.bidder===V.me){
+    var pk=S.pick,ready=pk.trump&&pk.cards.length===V.pc;
+    var heldN=function(f){return V.hand.filter(function(h){return h.f===f;}).length;};
+    var pickCount=function(f){return pk.cards.filter(function(x){return x.f===f;}).length;};
+    var picked=function(f){return pickCount(f)>0;};
+    var rows=SUITS.map(function(st){
+      var fs=Object.keys(V.faces).filter(function(f){return f.slice(-1)===st&&heldN(f)<V.faces[f];}).sort(function(a,c){return parseInt(c,10)-parseInt(a,10);});
+      return '<div class="pickrow">'+fs.map(function(f){
+        var cnt=pickCount(f), canBoth=V.decks===2&&heldN(f)===0;
+        var title=cnt===0?'Tap to select first copy':(cnt===1&&canBoth?'Tap again to select second copy':'Tap again to deselect');
+        return miniHTML(fromFace(f),{btn:true,sel:picked(f),pat:heldN(f)>0})
+          .replace('title=\"'+(cnt?'Tap again to deselect':'Tap to select')+'\"','title=\"'+title+'\"');
+      }).join('')+'</div>';
+    }).join('');
+    var chosen=pk.cards.map(function(x){
+      var pat=heldN(x.f)>0;
+      return '<div class="row">'+miniHTML(fromFace(x.f),{pat:pat})
+        +(pat?'<span class="note">Pattern copy: you hold one copy, so your partner is whoever plays the other copy.</span>':'')
+        +(V.decks===2&&!pat?'<div class="seg" role="group" aria-label="Which copy">'
+          +[1,2].map(function(n){return '<button type="button" data-action="occ" data-v="'+x.f+'" data-n="'+n+'" aria-pressed="'+(x.n===n)+'">'+(n===1?'First':'Second')+' copy played</button>';}).join('')+'</div>':'')
+        +'</div>';
+    }).join('');
+    return '<div class="panel"><div><b>Trump suit</b></div>'
+      +'<div class="suitpick">'+SUITS.map(function(st){return '<button type="button" class="suitbtn'+(pk.trump===st?' sel':'')+'" data-action="trump" data-v="'+st+'" aria-pressed="'+(pk.trump===st)+'">'+(isRed(st)?'<span class="r">'+SYM[st]+'</span>':SYM[st])+' '+SNAME[st]+'</button>';}).join('')+'</div>'
+      +'<div><b>Call '+V.pc+' partner card'+(V.pc>1?'s':'')+'</b> ('+pk.cards.length+' of '+V.pc+' chosen). '
+      +(V.decks===2?'There are two copies of each card. Tap a card once for the first copy, tap it again to select both copies, and tap again to remove it. If you hold a copy, it is a pattern copy and only the other copy can be your partner. ':'')+'They stay hidden until they play it.</div>'
+      +'<div class="pickrows">'+rows+'</div>'
+      +(chosen?'<div class="pickrows">'+chosen+'</div>':'')
+      +'<div class="row"><button type="button" class="btn primary" data-action="confirm"'+(ready?'':' disabled')+'>Start the round</button></div></div>';
+  }
+  if((V.phase==='play'||V.phase==='trickEnd')&&V.bidder===V.me&&V.canEndEarly){
+    return '<div class="panel"><h3>Round already lost</h3><p>The partners are revealed and the bidding side can no longer reach the bid, even with all remaining points.</p><div class="row"><button type="button" class="btn primary" data-action="endEarly">End round</button></div></div>';
+  }
+  if(V.phase==='end'){
+    var r=V.result,partners=r.team.filter(function(i){return i!==V.bidder;});
+    var rowsT=V.names.map(function(n,i){
+      var d=r.delta[i];
+      return '<tr><td>'+esc(i===V.me?n+' (you)':n)+(i===V.bidder?', bidder':(partners.indexOf(i)>=0?', partner':''))+'</td><td class="n">'+(d?sgn(d):'0')+'</td><td class="n">'+sgn(V.scores[i])+'</td></tr>';
+    }).join('');
+    return '<div class="panel"><h2>'+(r.ok?'Bid made':'Bid failed')+'</h2>'
+      +'<p>'+esc(nm(V.bidder))+' bid '+V.bid.amount+'. '+(partners.length?'With '+partners.map(function(i){return esc(nm(i));}).join(' and ')+', the':'Playing alone, the')+' bidding side took '+r.tp+' points.</p>'
+      +'<table class="sc"><thead><tr><th>Player</th><th class="n">This round</th><th class="n">Total</th></tr></thead><tbody>'+rowsT+'</tbody></table>'
+      +'<div class="row"><button type="button" class="btn primary" data-action="next">Deal next round</button></div></div>';
+  }
+  return '';
+}
+function handHTML(){
+  var V=S.V,my=V.phase==='play'&&V.turn===V.me;
+  function one(c){
+    var ok=V.legal.indexOf(c.id)>=0;
+    return cardHTML(c,{tag:'button',cls:my?(ok?'ok':'dim'):'',attrs:'type="button" data-action="play" data-card="'+c.id+'"'+(my&&!ok?' disabled':'')});
+  }
+  var h=V.hand,narrow=window.innerWidth<700;
+  if(narrow&&h.length>13){
+    var m=Math.ceil(h.length/2);
+    return '<div class="hand" style="--n:'+m+'">'+h.slice(0,m).map(one).join('')+'</div>'
+      +'<div class="hand row2" style="--n:'+m+'">'+h.slice(m).map(one).join('')+'</div>';
+  }
+  return '<div class="hand" style="--n:'+Math.max(h.length,6)+'">'+h.map(one).join('')+'</div>';
+}
+function gameHTML(){
+  var V=S.V;
+  var secret=(V.phase==='play'||V.phase==='trickEnd')&&V.bidder!==V.me&&V.revealed.indexOf(V.me)<0&&holdsCalled()
+    ?'<p class="secret">'+(V.called.some(function(c){return c.pattern&&c.by===null&&V.hand.some(function(h){return h.f===c.f;});})?'You hold the other copy of a pattern copy card the bidder also holds, so you are secretly the bidder\u2019s partner.':V.decks===2?'You hold a copy of a called card. If you play the copy the bidder named (first or second played), you join the bidder\u2019s side.':'You hold a called card, so you are secretly on the bidder\u2019s side.')+'</p>':'';
+  return '<div class="topbar"><div class="brand">Kali Ni Tidi</div><button type="button" class="btn small" data-action="leave">Leave</button></div>'
+    +'<div class="chips">'+chipsHTML()+'</div>'
+    +voiceBarHTML()
+    +videoBarHTML()
+    +'<div class="felt" aria-label="Card table">'+tableHTML()+'</div>'
+    +'<div class="center"><p class="msg" role="status" aria-live="polite">'+esc(messageText())+'</p>'+secret
+    +(S.err?'<p class="err" role="alert">'+esc(S.err)+'</p>':'')+panelHTML()+'</div>'
+    +'<div class="me">'+handHTML()+'</div>';
+}
+
+function render(){
+  var V=S.V,html;
+  if(!session()||!V)html=homeHTML();
+  else if(V.stage==='lobby')html=lobbyHTML();
+  else{
+    var key=V.round+':'+V.phase;
+    if(key!==S.lastPhaseKey){S.lastPhaseKey=key;S.pick={trump:null,cards:[]};S.myBid=0;}
+    html=gameHTML();
+  }
+  var mine=!!(V&&V.stage==='game'&&V.acting===V.me);
+  if(mine&&!S.wasMine&&navigator.vibrate){try{navigator.vibrate(60);}catch(e){}}
+  S.wasMine=mine;
+  document.title=mine?'Your turn - Kali Ni Tidi':'Kali Ni Tidi';
+  keepAwake(!!(V&&V.stage==='game'));
+  $app.innerHTML=html+(S.reconnecting?'<div class="toast" role="status">Reconnecting\u2026</div>':'');
+  applySpeaking();
+}
+
+/* ---------- app niceties: keep the screen on during a game, install prompt, offline shell ---------- */
+var wake=null;
+function keepAwake(on){
+  try{
+    if(!on){if(wake){wake.release();wake=null;}return;}
+    if(wake||!navigator.wakeLock)return;
+    navigator.wakeLock.request('screen').then(function(l){wake=l;l.addEventListener('release',function(){wake=null;});}).catch(function(){});
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&S.V&&S.V.stage==='game')keepAwake(true);});
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEvt=e;if(!session())render();});
+window.addEventListener('appinstalled',function(){S.installEvt=null;render();});
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
+
+/* ---------- live voice chat (WebRTC, audio only; the server just relays the handshake) ---------- */
+var VC={on:false,muted:false,stream:null,peers:{},early:{},ctx:null,an:{},ice:[{urls:['stun:stun.l.google.com:19302']}],err:'',failed:false,speak:{}};
+
+function voiceBarHTML(){
+  var V=S.V;if(!V)return '';
+  var n=V.voice.length;
+  if(!VC.on){
+    return '<div class="voicebar"><button type="button" class="btn small" data-action="vjoin">Join voice chat</button>'
+      +'<span class="note">'+(n?n+' in the call. ':'')+'Use headphones so people do not hear an echo.</span>'
+      +(VC.err?'<span class="err" role="alert">'+esc(VC.err)+'</span>':'')+'</div>';
+  }
+  return '<div class="voicebar"><button type="button" class="btn small'+(VC.muted?'':' primary')+'" data-action="vmute" aria-pressed="'+VC.muted+'">'+(VC.muted?'Unmute mic':'Mute mic')+'</button>'
+    +'<button type="button" class="btn small" data-action="vleave">Leave voice</button>'
+    +'<span class="note">'+n+' in the call'+(VC.muted?', your mic is off':'')+'</span>'
+    +(VC.failed?'<span class="err">Some players cannot connect. Their network blocks direct audio.</span>':'')+'</div>';
+}
+function videoBarHTML(){
+  var V=S.V;if(!V)return '';
+  var n=(V.video||[]).length;
+  if(!VVideo.on){
+    return '<div class="videobar"><div class="row"><button type="button" class="btn small" data-action="vidjoin">Join video</button><span class="note">'+(n?n+' in video. ':'')+'Camera and mic are optional.</span></div>'+(VVideo.err?'<span class="err" role="alert">'+esc(VVideo.err)+'</span>':'')+'</div>';
+  }
+  return '<div class="videobar"><div class="row"><button type="button" class="btn small'+(VVideo.camOff?'':' primary')+'" data-action="vidcam">'+(VVideo.camOff?'Camera on':'Camera off')+'</button><button type="button" class="btn small'+(VVideo.micOff?'':' primary')+'" data-action="vidmic">'+(VVideo.micOff?'Mic on':'Mic off')+'</button><button type="button" class="btn small" data-action="vidleave">Leave video</button><span class="note">'+n+' in video · camera/mic only · no recording or screen sharing</span></div>'+(VVideo.failed?' <span class="err">Some players cannot connect to video. Their network may block direct video.</span>':'')+'</div>';;
+}
+
+function micError(e){
+  if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))return 'Microphone access was blocked. Allow it in your browser settings and try again.';
+  if(e&&e.name==='NotFoundError')return 'No microphone found.';
+  return 'Could not start the microphone.';
+}
+function ensureCtx(){
+  try{
+    if(!VC.ctx){var AC=window.AudioContext||window.webkitAudioContext;if(AC)VC.ctx=new AC();}
+    if(VC.ctx&&VC.ctx.state==='suspended')VC.ctx.resume();
+  }catch(e){}
+}
+function watch(uid,stream){
+  if(!VC.ctx||!stream)return;
+  try{
+    var an=VC.ctx.createAnalyser();an.fftSize=512;
+    VC.ctx.createMediaStreamSource(stream).connect(an);
+    VC.an[uid]={an:an,buf:new Uint8Array(an.fftSize)};
+  }catch(e){}
+}
+function applySpeaking(){
+  var els=document.querySelectorAll('[data-uid]');
+  for(var i=0;i<els.length;i++)els[i].classList.toggle('speaking',!!VC.speak[els[i].getAttribute('data-uid')]);
+}
+setInterval(function(){
+  if(!VC.on)return;
+  var changed=false,me=S.V&&S.V.myUid;
+  Object.keys(VC.an).forEach(function(u){
+    var o=VC.an[u];o.an.getByteTimeDomainData(o.buf);
+    var sq=0;for(var i=0;i<o.buf.length;i++){var d=(o.buf[i]-128)/128;sq+=d*d;}
+    var on=Math.sqrt(sq/o.buf.length)>0.03&&!(u===me&&VC.muted);
+    if(!!VC.speak[u]!==on){VC.speak[u]=on;changed=true;}
+  });
+  if(changed)applySpeaking();
+},150);
+
+function vsignal(to,kind,data){var s=session();if(s)post('/api/signal',{room:s.room,pid:s.pid,to:to,kind:kind,data:data});}
+function closePeer(uid){
+  var p=VC.peers[uid];
+  if(p){try{p.pc.close();}catch(e){}if(p.audio&&p.audio.parentNode)p.audio.parentNode.removeChild(p.audio);delete VC.peers[uid];}
+  delete VC.an[uid];delete VC.speak[uid];
+}
+function makePeer(uid){
+  closePeer(uid);
+  var pc=new RTCPeerConnection({iceServers:VC.ice}),p={pc:pc,audio:null,pending:[]};
+  VC.peers[uid]=p;
+  VC.stream.getTracks().forEach(function(t){pc.addTrack(t,VC.stream);});
+  pc.onicecandidate=function(e){if(e.candidate)vsignal(uid,'ice',e.candidate);};
+  pc.ontrack=function(e){
+    var st=e.streams[0]||new MediaStream([e.track]);
+    if(!p.audio){
+      var a=document.createElement('audio');a.autoplay=true;a.setAttribute('playsinline','');
+      document.getElementById('voiceAudio').appendChild(a);p.audio=a;
+    }
+    p.audio.srcObject=st;
+    var pl=p.audio.play();if(pl&&pl.catch)pl.catch(function(){});
+    watch(uid,st);
+  };
+  pc.onconnectionstatechange=function(){
+    if(pc.connectionState==='failed'){VC.failed=true;render();}
+    else if(pc.connectionState==='connected'&&VC.failed){
+      VC.failed=Object.keys(VC.peers).some(function(k){return VC.peers[k].pc.connectionState==='failed';});render();
+    }
+  };
+  (VC.early[uid]||[]).forEach(function(c){p.pending.push(c);});delete VC.early[uid];
+  return p;
+}
+function flush(p){
+  var list=p.pending.splice(0);
+  list.forEach(function(c){p.pc.addIceCandidate(c).catch(function(){});});
+}
+function handleSignal(m){
+  if(!VC.on||!m||!m.from)return;
+  var p;
+  if(m.kind==='offer'){
+    p=makePeer(m.from);
+    p.pc.setRemoteDescription(m.data).then(function(){flush(p);return p.pc.createAnswer();})
+      .then(function(a){return p.pc.setLocalDescription(a);})
+      .then(function(){vsignal(m.from,'answer',p.pc.localDescription);}).catch(function(){});
+  }else if(m.kind==='answer'){
+    p=VC.peers[m.from];
+    if(p)p.pc.setRemoteDescription(m.data).then(function(){flush(p);}).catch(function(){});
+  }else if(m.kind==='ice'){
+    p=VC.peers[m.from];
+    if(!p){(VC.early[m.from]=VC.early[m.from]||[]).push(m.data);}
+    else if(p.pc.remoteDescription)p.pc.addIceCandidate(m.data).catch(function(){});
+    else p.pending.push(m.data);
+  }
+}
+/* Whoever joined the call later makes the offer, so two people never offer at the same time. */
+function syncVoice(V){
+  if(!VC.on||!V)return;
+  var me=V.myUid,order=V.voice,mine=order.indexOf(me),s=session();
+  if(mine<0){ // the server lost us (for example after a dropped connection): rejoin
+    Object.keys(VC.peers).forEach(closePeer);
+    if(s)post('/api/voice',{room:s.room,pid:s.pid,on:true});
+    return;
+  }
+  Object.keys(VC.peers).forEach(function(u){if(order.indexOf(u)<0)closePeer(u);});
+  order.forEach(function(u,idx){
+    if(u===me||VC.peers[u]||idx>mine)return;
+    var p=makePeer(u);
+    p.pc.createOffer().then(function(o){return p.pc.setLocalDescription(o);})
+      .then(function(){vsignal(u,'offer',p.pc.localDescription);}).catch(function(){});
+  });
+}
+function voiceJoin(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.RTCPeerConnection){
+    VC.err='Voice chat needs a secure (https) address and a newer browser.';render();return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false}).then(function(stream){
+    VC.stream=stream;VC.on=true;VC.muted=false;VC.err='';VC.failed=false;
+    ensureCtx();watch(S.V.myUid,stream);
+    return fetch('/api/ice').then(function(r){return r.json();}).then(function(c){if(c&&c.iceServers)VC.ice=c.iceServers;},function(){})
+      .then(function(){var s=session();return post('/api/voice',{room:s.room,pid:s.pid,on:true});});
+  }).then(function(){render();}).catch(function(e){VC.err=micError(e);VC.on=false;render();});
+}
+function voiceLeave(notify){
+  Object.keys(VC.peers).forEach(closePeer);
+  if(VC.stream){VC.stream.getTracks().forEach(function(t){t.stop();});VC.stream=null;}
+  VC.on=false;VC.muted=false;VC.an={};VC.speak={};VC.early={};VC.failed=false;
+  var s=session();if(notify&&s)post('/api/voice',{room:s.room,pid:s.pid,on:false});
+}
+function voiceMute(){
+  VC.muted=!VC.muted;
+  if(VC.stream)VC.stream.getAudioTracks().forEach(function(t){t.enabled=!VC.muted;});
+  render();
+}
+
+
+var VVideo={on:false,camOff:false,micOff:false,stream:null,peers:{},early:{},ice:[{urls:['stun:stun.l.google.com:19302']}],err:'',failed:false};
+function vsignalVideo(to,kind,data){var s=session();if(s)post('/api/signal',{room:s.room,pid:s.pid,to:to,kind:'video-'+kind,data:data});}
+function closeVideoPeer(uid){var p=VVideo.peers[uid];if(p){try{p.pc.close();}catch(e){}if(p.video&&p.video.parentNode)p.video.parentNode.parentNode.removeChild(p.video.parentNode);delete VVideo.peers[uid];}}
+function videoTile(uid,stream){var slot=document.querySelector('[data-video-slot="'+uid+'"]');if(!slot)return;var p=VVideo.peers[uid]||{};var v=p.video;if(!v){var tile=document.createElement('div');tile.className='videoTile'+(uid===S.V.myUid?' me':'');tile.setAttribute('data-video-uid',uid);v=document.createElement('video');v.autoplay=true;v.playsInline=true;v.muted=true;tile.appendChild(v);var name=document.createElement('span');name.className='vname';var ix=S.V.uids.indexOf(uid);name.textContent=ix>=0?S.V.names[ix]:'Player';tile.appendChild(name);slot.appendChild(tile);p.video=v;if(VVideo.peers[uid])VVideo.peers[uid].video=v;}v.muted=(uid===S.V.myUid);v.srcObject=stream;var pl=v.play();if(pl&&pl.catch)pl.catch(function(){});}
+function makeVideoPeer(uid){closeVideoPeer(uid);var pc=new RTCPeerConnection({iceServers:VVideo.ice}),p={pc:pc,video:null,pending:[]};VVideo.peers[uid]=p;VVideo.stream.getVideoTracks().forEach(function(t){pc.addTrack(t,VVideo.stream);});pc.onicecandidate=function(e){if(e.candidate)vsignalVideo(uid,'ice',e.candidate);};pc.ontrack=function(e){videoTile(uid,e.streams[0]||new MediaStream([e.track]));};pc.onconnectionstatechange=function(){if(pc.connectionState==='failed'){VVideo.failed=true;render();}};(VVideo.early[uid]||[]).forEach(function(c){p.pending.push(c);});delete VVideo.early[uid];return p;}
+function flushVideo(p){p.pending.splice(0).forEach(function(c){p.pc.addIceCandidate(c).catch(function(){});});}
+function handleVideoSignal(m){if(!VVideo.on||!m||!m.from)return;var p;if(m.kind==='video-offer'){p=makeVideoPeer(m.from);p.pc.setRemoteDescription(m.data).then(function(){flushVideo(p);return p.pc.createAnswer();}).then(function(a){return p.pc.setLocalDescription(a);}).then(function(){vsignalVideo(m.from,'answer',p.pc.localDescription);}).catch(function(){});}else if(m.kind==='video-answer'){p=VVideo.peers[m.from];if(p)p.pc.setRemoteDescription(m.data).then(function(){flushVideo(p);}).catch(function(){});}else if(m.kind==='video-ice'){p=VVideo.peers[m.from];if(!p)(VVideo.early[m.from]=VVideo.early[m.from]||[]).push(m.data);else if(p.pc.remoteDescription)p.pc.addIceCandidate(m.data).catch(function(){});else p.pending.push(m.data);}}
+function syncVideo(V){if(!VVideo.on||!V)return;videoTile(V.myUid,VVideo.stream);var me=V.myUid,order=V.video||[],mine=order.indexOf(me),s=session();if(mine<0){Object.keys(VVideo.peers).forEach(closeVideoPeer);if(s)post('/api/video',{room:s.room,pid:s.pid,on:true});return;}Object.keys(VVideo.peers).forEach(function(u){if(order.indexOf(u)<0)closeVideoPeer(u);});order.forEach(function(u,idx){if(u===me||VVideo.peers[u]||idx>mine)return;var p=makeVideoPeer(u);p.pc.createOffer().then(function(o){return p.pc.setLocalDescription(o);}).then(function(){vsignalVideo(u,'offer',p.pc.localDescription);}).catch(function(){});});}
+function videoJoin(){if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.RTCPeerConnection){VVideo.err='Video chat needs a secure (https) address and a newer browser.';render();return;}if(VC.on)voiceLeave(true);navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(stream){VVideo.stream=stream;VVideo.on=true;VVideo.camOff=false;VVideo.micOff=false;VVideo.err='';VVideo.failed=false;return fetch('/api/ice').then(function(r){return r.json();}).then(function(c){if(c&&c.iceServers)VVideo.ice=c.iceServers;},function(){}).then(function(){var s=session();return post('/api/video',{room:s.room,pid:s.pid,on:true});});}).then(function(){render();syncVideo(S.V);}).catch(function(e){VVideo.err=(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))?'Camera/microphone access was blocked. Allow both permissions in your browser settings and try again.':(e&&e.name==='NotFoundError'?'Camera or microphone not found.':'Could not start camera/microphone.');VVideo.on=false;render();});}
+function videoLeave(notify){Object.keys(VVideo.peers).forEach(closeVideoPeer);if(VVideo.stream){VVideo.stream.getTracks().forEach(function(t){t.stop();});VVideo.stream=null;}VVideo.on=false;VVideo.camOff=false;VVideo.micOff=false;VVideo.early={};VVideo.failed=false;var s=session();if(notify&&s)post('/api/video',{room:s.room,pid:s.pid,on:false});}
+function videoCam(){VVideo.camOff=!VVideo.camOff;if(VVideo.stream)VVideo.stream.getVideoTracks().forEach(function(t){t.enabled=!VVideo.camOff;});render();}
+function videoMic(){VVideo.micOff=!VVideo.micOff;if(VVideo.stream)VVideo.stream.getAudioTracks().forEach(function(t){t.enabled=!VVideo.micOff;});render();}
+
+/* ---------- input ---------- */
+document.addEventListener('click',function(e){
+  var el=e.target.closest?e.target.closest('[data-action]'):null;
+  if(!el||el.disabled)return;
+  var a=el.getAttribute('data-action'),v=el.getAttribute('data-v'),V=S.V;
+  switch(a){
+    case 'vjoin':voiceJoin();break;
+    case 'vleave':voiceLeave(true);render();break;
+    case 'vmute':voiceMute();break;
+    case 'vidjoin':videoJoin();break;
+    case 'vidleave':videoLeave(true);render();break;
+    case 'vidcam':videoCam();break;
+    case 'vidmic':videoMic();break;
+    case 'mode0':S.mode=v;render();break;
+    case 'install':
+      if(S.installEvt){S.installEvt.prompt();S.installEvt.userChoice.then(function(){S.installEvt=null;render();});}
+      break;
+    case 'create':
+      if(!S.name.trim()){S.err='Enter your name first.';render();break;}
+      post('/api/create',{name:S.name,mode:S.mode}).then(function(r){enter(r,S.name);});break;
+    case 'join':
+      if(!S.name.trim()){S.err='Enter your name first.';render();break;}
+      if(S.code.trim().length<4){S.err='Enter the 4 letter room code.';render();break;}
+      post('/api/join',{room:S.code,name:S.name}).then(function(r){enter(r,S.name);});break;
+    case 'leave':
+      if(!window.confirm('Leave this room? A computer player will take your seat.'))break;
+      var s=session();if(s)post('/api/leave',{room:s.room,pid:s.pid});
+      leaveLocal('');break;
+    case 'copy':
+      var link=location.origin+'/?room='+V.code;
+      var done=function(){var c=document.getElementById('copied');if(c)c.textContent='Copied';};
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(link).then(done,function(){window.prompt('Copy this link',link);});
+      else window.prompt('Copy this link',link);
+      break;
+    case 'mode':act('mode',{mode:v});break;
+    case 'start':act('start');break;
+    case 'next':act('next');break;
+    case 'bid':act('bid',{amount:S.myBid});break;
+    case 'pass':act('pass');break;
+    case 'finalBid':act('finalBid',{amount:S.myBid});break;
+    case 'keepBid':act('keepBid');break;
+    case 'trump':S.pick.trump=v;render();break;
+    case 'pick':
+      // Partner cards are toggles: tap/click once to select, tap/click again to deselect.
+      // Nothing is sent to the server until the player presses Start the round.
+      e.preventDefault();
+      var ks=[];
+      S.pick.cards.forEach(function(x,idx){if(x.f===v)ks.push(idx);});
+      var held=V.hand.filter(function(h){return h.f===v;}).length;
+      if(ks.length===0){
+        if(S.pick.cards.length<V.pc) S.pick.cards.push({f:v,n:1});
+      }else if(ks.length===1 && V.decks===2 && held===0 && S.pick.cards.length<V.pc){
+        S.pick.cards.push({f:v,n:2});
+      }else{
+        for(var z=ks.length-1;z>=0;z--) S.pick.cards.splice(ks[z],1);
+      }
+      render();break;
+    case 'occ':
+      var q=S.pick.cards.find(function(x){return x.f===v;});
+      if(q){q.n=parseInt(el.getAttribute('data-n'),10);render();}
+      break;
+    case 'confirm':
+      if(S.pick.trump&&S.pick.cards.length===V.pc)act('call',{trump:S.pick.trump,called:S.pick.cards});
+      break;
+    case 'play':act('play',{card:el.getAttribute('data-card')});break;
+    case 'endEarly':act('endEarly');break;
+  }
+});
+document.addEventListener('input',function(e){
+  var t=e.target;if(!t)return;
+  if(t.id==='nameIn')S.name=t.value;
+  else if(t.id==='codeIn'){t.value=t.value.toUpperCase();S.code=t.value;}
+  else if(t.id==='bidRange'){
+    S.myBid=parseInt(t.value,10);
+    var o=document.getElementById('bidVal'),bt=document.getElementById('bidBtn');
+    if(o)o.textContent=S.myBid;if(bt)bt.textContent=(S.V&&S.V.phase==='finalBid'?'Increase to ':'Bid ')+S.myBid;
+  }
+});
+window.addEventListener('resize',function(){if(S.V&&S.V.stage==='game')render();});
+
+/* ---------- start ---------- */
+S.name=lsGet('kt_name')||'';
+var qp=new URLSearchParams(location.search).get('room');
+if(qp)S.code=qp.toUpperCase().slice(0,4);
+var ex=session();
+if(ex&&(!qp||qp.toUpperCase()===ex.room)){connect();}
+else if(ex&&qp&&qp.toUpperCase()!==ex.room){saveSession(null);}
+render();
+})();
+
+</script>
+</body>
+</html>

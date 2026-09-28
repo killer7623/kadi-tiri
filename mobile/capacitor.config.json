@@ -1,0 +1,10 @@
+{
+  "appId": "com.example.kalinitidi",
+  "appName": "Kali Ni Tidi",
+  "webDir": "www",
+  "server": {
+    "url": "https://YOUR-SERVER-ADDRESS-HERE",
+    "cleartext": false
+  },
+  "backgroundColor": "#0d2124"
+}
