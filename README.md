@@ -47,16 +47,19 @@ The installable version above is usually enough. If you want a listing in the st
 - Apple can reject apps that only show a website. If you go to the App Store, expect to add some native touches first.
 - The app loads the game from your server, so the server must be running for anyone to play.
 
-## Voice chat
+## Voice and video chat
 
-Everyone at the table can talk to each other. Players tap Join voice chat (in the lobby or during the game), allow the microphone, and can then mute or leave the call at any time. A green outline shows who is speaking.
+Everyone at the table can talk to each other, and can optionally show a live camera. Players tap Join video chat or Audio only (in the lobby or during the game) and allow the microphone (and camera, if chosen). They can mute the mic, turn the camera on or off, or leave the call at any time.
 
-- Audio goes directly between the players' phones. The server only passes along the set-up messages.
-- It needs an https address (or localhost) so the browser will allow the microphone.
+- A green outline shows who is currently speaking.
+- When a player's camera is on, their live video fills their own seat on the table (the same box that shows their name and score) during actual card play; their name, badges and score sit on top over a dark gradient so they stay readable. Between tricks and during bidding, the table switches to a compact list and video is not shown there.
+- Turning the camera off (yours or anyone else's) instantly reverts that seat back to the plain name/score box for everyone else — nobody is left looking at a frozen frame.
+- Audio and video go directly between the players' phones (peer-to-peer). The server only passes along the small set-up messages, never the media itself.
+- It needs an https address (or localhost) so the browser will allow the camera and microphone.
 - Use headphones. If two people in the same room join, they will hear an echo.
-- Computer players do not talk, and voice is optional, so people who do not join can still play.
+- Computer players never talk or show video, and joining the call is optional, so people who skip it can still play.
 
-Most connections work with the free public STUN servers already set in the app. A minority of networks (some mobile carriers and strict office or school Wi-Fi) block direct audio, and those players will see a message saying they cannot connect. To fix that you need a TURN relay. Get one from a provider (Metered.ca and Twilio have free or cheap plans) or run your own with coturn, then set these environment variables on the server:
+Most connections work with the free public STUN servers already set in the app. A minority of networks (some mobile carriers and strict office or school Wi-Fi) block a direct connection, and those players will see a message saying they cannot connect. To fix that you need a TURN relay. Get one from a provider (Metered.ca and Twilio have free or cheap plans) or run your own with coturn, then set these environment variables on the server:
 
     KT_TURN_URLS=turn:your-turn-host:3478,turns:your-turn-host:443?transport=tcp
     KT_TURN_USER=your-username

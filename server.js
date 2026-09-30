@@ -53,8 +53,8 @@ const human = (room, pid) => room.players.find(p => p.pid === pid);
 function makeRoom(mode, hostName) {
   const pid = rid();
   const room = {
-    code: newCode(), mode, players: [{ pid, uid: uid8(), name: hostName }], hostPid: pid, voice: new Set(), video: new Set(),
-    g: null, seats: null, seatOf: {}, clients: new Map(), timer: null, last: Date.now()
+    code: newCode(), mode, players: [{ pid, uid: uid8(), name: hostName }], hostPid: pid, voice: new Set(),
+    g: null, seats: null, seatOf: {}, spectators: new Map(), clients: new Map(), timer: null, last: Date.now()
   };
   rooms.set(room.code, room);
   return { room, pid };
@@ -63,13 +63,20 @@ function uidOf(room, pid) {
   const p = human(room, pid);
   if (p) return p.uid;
   const s = room.seats && room.seats[room.seatOf[pid]];
-  return s ? s.uid : null;
+  if (s) return s.uid;
+  const sp = room.spectators.get(pid);
+  return sp ? sp.uid : null;
 }
 function pidOfUid(room, uid) {
   const p = room.players.find(x => x.uid === uid);
   if (p) return p.pid;
   const s = room.seats && room.seats.find(x => x && x.kind === 'human' && x.uid === uid);
-  return s ? s.pid : null;
+  if (s) return s.pid;
+  for (const [pid, sp] of room.spectators) if (sp.uid === uid) return pid;
+  return null;
+}
+function spectatorList(room, pid) {
+  return Array.from(room.spectators.entries()).map(([spid, s]) => ({ name: s.name, me: spid === pid }));
 }
 function sendTo(room, pid, event, obj) {
   const set = room.clients.get(pid);
@@ -86,15 +93,17 @@ function botName(room) {
 /* ---------- views: each player only ever receives their own hand ---------- */
 function view(room, pid) {
   const g = room.g;
+  const spectating = room.spectators.has(pid);
   if (!g) {
     return {
       stage: 'lobby', code: room.code, mode: room.mode, n: MODES[room.mode].n,
-      isHost: pid === room.hostPid,
-      myUid: uidOf(room, pid), voice: Array.from(room.voice), video: Array.from(room.video || []),
-      players: room.players.map(p => ({ uid: p.uid, name: p.name, host: p.pid === room.hostPid, me: p.pid === pid, online: isConnected(room, p.pid) }))
+      isHost: pid === room.hostPid, spectating,
+      myUid: uidOf(room, pid), voice: Array.from(room.voice),
+      players: room.players.map(p => ({ uid: p.uid, name: p.name, host: p.pid === room.hostPid, me: p.pid === pid, online: isConnected(room, p.pid) })),
+      spectators: spectatorList(room, pid)
     };
   }
-  const me = room.seatOf[pid];
+  const me = spectating ? null : room.seatOf[pid];
   const acting = E.whoActs(g);
   const faces = {};
   g.fullDeck.forEach(c => { faces[c.f] = (faces[c.f] || 0) + 1; });
@@ -102,19 +111,23 @@ function view(room, pid) {
     stage: 'game', code: room.code, me, n: g.n, decks: g.decks, total: g.total, minBid: g.minBid, maxCap: g.maxCap, pc: g.pc,
     names: room.seats.map(s => s.name),
     uids: room.seats.map(s => s.kind === 'human' ? s.uid : null),
-    myUid: uidOf(room, pid), voice: Array.from(room.voice), video: Array.from(room.video || []),
+    myUid: uidOf(room, pid), voice: Array.from(room.voice),
     kinds: room.seats.map(s => s.kind),
     online: room.seats.map(s => s.kind === 'bot' ? true : isConnected(room, s.pid)),
     round: g.round, phase: g.phase, acting,
-    bid: { amount: g.bid.amount, by: g.bid.by, last: g.bid.last, turn: g.bid.turn, finalBidUsed: !!g.bid.finalBidUsed },
+    bid: { amount: g.bid.amount, by: g.bid.by, last: g.bid.last, turn: g.bid.turn },
     bidder: g.bidder, trump: g.trump,
     called: g.called.map(c => ({ f: c.f, n: c.n, pattern: c.pattern, by: c.by === undefined ? null : c.by })),
     revealed: Array.from(g.revealed),
-    hand: g.hands[me], counts: g.hands.map(h => h.length),
-    legal: (g.phase === 'play' && g.turn === me) ? E.legal(g, me).map(c => c.id) : [],
-    taken: g.taken, scores: g.scores,
+    hand: me != null ? g.hands[me] : [], counts: g.hands.map(h => h.length),
+    legal: (me != null && g.phase === 'play' && g.turn === me) ? E.legal(g, me).map(c => c.id) : [],
+    taken: g.taken, scores: g.scores, spectating, spectators: spectatorList(room, pid),
     trick: g.trick, turn: g.turn, winner: g.winner, trickPts: g.trickPts,
-    result: g.result, faces, canEndEarly: E.canEndEarly(g)
+    result: g.result, faces, canEndEarly: E.canEndEarly(g),
+    penalty: g.penalty ? {
+      partners: g.penalty.partners, votes: g.penalty.votes, bid: g.bid.amount, tp: g.penalty.res.tp,
+      youVote: g.penalty.partners.indexOf(me) >= 0 ? (g.penalty.votes[me] === undefined ? null : g.penalty.votes[me]) : undefined
+    } : null
   };
 }
 function broadcast(room) {
@@ -128,13 +141,10 @@ function broadcast(room) {
 /* ---------- turn scheduling: computer players, and humans who are offline ---------- */
 function botAct(room, s) {
   const g = room.g;
-  if (!g || E.whoActs(g) !== s) return;
+  if (!g) return;
+  if (g.phase === 'penalty') { E.doPenaltyVote(g, s, E.botPenaltyVote()); return; }
+  if (E.whoActs(g) !== s) return;
   if (g.phase === 'bid') { const a = E.botBid(g, s); if (a) E.doBid(g, s, a); else E.doPass(g, s); }
-  else if (g.phase === 'finalBid') {
-    const current = g.bid.amount, max = Math.min(g.maxCap, g.maxBid[s]);
-    if (max >= current + 5 && Math.random() < .5) E.doFinalBid(g, s, current + 5 * Math.floor((max-current) / 5));
-    else E.keepFinalBid(g, s);
-  }
   else if (g.phase === 'call') { const c = E.botCall(g); E.doCall(g, s, c.trump, c.called); }
   else if (g.phase === 'play') E.doPlay(g, s, E.chooseCard(g, s).id);
 }
@@ -144,6 +154,19 @@ function schedule(room) {
   const g = room.g;
   if (!g) return;
   if (g.phase === 'trickEnd') { room.timer = setTimeout(() => { E.clearTrick(g); afterChange(room); }, 1700 * SPEED); return; }
+  if (g.phase === 'penalty') {
+    const pending = E.pendingPenaltyVoters(g);
+    if (!pending.length) return;
+    let actor = null, delay = Infinity;
+    pending.forEach(p => {
+      const seat = room.seats[p];
+      const d = seat.kind === 'bot' ? 900 + Math.random() * 500 : (isConnected(room, seat.pid) ? Infinity : 7000);
+      if (d < delay) { delay = d; actor = p; }
+    });
+    if (actor === null) return; // every remaining voter is an online human; wait for them
+    room.timer = setTimeout(() => { botAct(room, actor); afterChange(room); }, delay * SPEED);
+    return;
+  }
   const s = E.whoActs(g);
   if (s === null) return;
   const seat = room.seats[s];
@@ -173,7 +196,7 @@ async function handleApi(req, res, url) {
   if (req.method === 'GET' && p === '/api/events') {
     const room = rooms.get(String(url.searchParams.get('room') || '').toUpperCase());
     const pid = url.searchParams.get('pid');
-    const known = room && (human(room, pid) || (room.seatOf && room.seatOf[pid] !== undefined));
+    const known = room && (human(room, pid) || (room.seatOf && room.seatOf[pid] !== undefined) || (room.spectators && room.spectators.has(pid)));
     if (!known) return json(res, 404, { error: 'Room not found' });
     res.writeHead(200, {
       'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform',
@@ -210,19 +233,29 @@ async function handleApi(req, res, url) {
     return json(res, 200, { room: room.code, pid });
   }
 
+  if (p === '/api/spectate') {
+    const room = rooms.get(String(b.room || '').toUpperCase().trim());
+    if (!room) return json(res, 404, { error: 'No room with that code' });
+    if (room.spectators.size >= 50) return json(res, 409, { error: 'Too many spectators in this room' });
+    const pid = rid();
+    room.spectators.set(pid, { uid: uid8(), name: cleanName(b.name) });
+    afterChange(room);
+    return json(res, 200, { room: room.code, pid });
+  }
+
   if (p === '/api/join') {
     const room = rooms.get(String(b.room || '').toUpperCase().trim());
     if (!room) return json(res, 404, { error: 'No room with that code' });
     const name = cleanName(b.name);
     if (!room.g) {
-      if (room.players.length >= MODES[room.mode].n) return json(res, 409, { error: 'That room is full' });
+      if (room.players.length >= MODES[room.mode].n) return json(res, 409, { error: 'That room is full. You can watch as a spectator instead.', canSpectate: true });
       const pid = rid();
       room.players.push({ pid, uid: uid8(), name });
       afterChange(room);
       return json(res, 200, { room: room.code, pid });
     }
     const seatIdx = room.seats.findIndex(s => s.kind === 'bot');
-    if (seatIdx < 0) return json(res, 409, { error: 'That room is full' });
+    if (seatIdx < 0) return json(res, 409, { error: 'That room is full. You can watch as a spectator instead.', canSpectate: true });
     const pid = rid();
     room.seats[seatIdx] = { kind: 'human', pid, uid: uid8(), name };
     room.seatOf[pid] = seatIdx;
@@ -234,7 +267,14 @@ async function handleApi(req, res, url) {
   if (!room) return json(res, 404, { error: 'Room not found' });
 
   if (p === '/api/leave') {
-    room.voice.delete(uidOf(room, b.pid)); room.video.delete(uidOf(room, b.pid));
+    room.voice.delete(uidOf(room, b.pid));
+    if (room.spectators.has(b.pid)) {
+      room.spectators.delete(b.pid);
+      const set = room.clients.get(b.pid);
+      if (set) { for (const r of set) { try { r.end(); } catch (e) { /* closed */ } } room.clients.delete(b.pid); }
+      afterChange(room);
+      return json(res, 200, { ok: true });
+    }
     if (!room.g) {
       room.players = room.players.filter(x => x.pid !== b.pid);
       if (room.hostPid === b.pid && room.players.length) room.hostPid = room.players[0].pid;
@@ -259,24 +299,13 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ok: true });
   }
 
-  if (p === '/api/video') {
-    const uid = uidOf(room, b.pid);
-    if (!uid) return json(res, 403, { error: 'You are not in this room' });
-    if (b.on) room.video.add(uid); else room.video.delete(uid);
-    afterChange(room);
-    return json(res, 200, { ok: true });
-  }
-
   if (p === '/api/signal') {
     const from = uidOf(room, b.pid);
-    const isVideo = String(b.kind || '').indexOf('video-') === 0;
-    const baseKind = isVideo ? String(b.kind).slice(6) : b.kind;
-    const set = isVideo ? room.video : room.voice;
-    if (!from || !set.has(from)) return json(res, 403, { error: isVideo ? 'Join video first' : 'Join the voice chat first' });
+    if (!from || !room.voice.has(from)) return json(res, 403, { error: 'Join the voice chat first' });
     const toPid = pidOfUid(room, String(b.to || ''));
-    if (!toPid || !set.has(b.to)) return json(res, 404, { error: 'That player is not in the call' });
-    if (!['offer', 'answer', 'ice'].includes(baseKind)) return json(res, 400, { error: 'Bad signal' });
-    sendTo(room, toPid, 'signal', { from, kind: isVideo ? 'video-' + baseKind : baseKind, data: b.data });
+    if (!toPid || !room.voice.has(b.to)) return json(res, 404, { error: 'That player is not in the voice chat' });
+    if (!['offer', 'answer', 'ice', 'cam'].includes(b.kind)) return json(res, 400, { error: 'Bad signal' });
+    sendTo(room, toPid, 'signal', { from, kind: b.kind, data: b.data });
     return json(res, 200, { ok: true });
   }
 
@@ -300,16 +329,11 @@ async function handleApi(req, res, url) {
   let ok = false;
   if (b.type === 'bid') ok = E.doBid(g, seat, b.amount);
   else if (b.type === 'pass') ok = E.doPass(g, seat);
-  else if (b.type === 'finalBid') ok = E.doFinalBid(g, seat, b.amount);
-  else if (b.type === 'keepBid') ok = E.keepFinalBid(g, seat);
   else if (b.type === 'call') ok = E.doCall(g, seat, b.trump, b.called);
   else if (b.type === 'play') ok = E.doPlay(g, seat, String(b.card));
-  else if (b.type === 'endEarly') {
-    // Only the bidder may use the early-end shortcut, and only when the
-    // engine has established that the bid is mathematically unreachable.
-    if (seat === g.bidder && E.canEndEarly(g)) { E.endRound(g); ok = true; }
-  }
   else if (b.type === 'next') { if (g.phase === 'end') { E.startRound(g); ok = true; } }
+  else if (b.type === 'endEarly') { if (seat === g.bidder) ok = E.endEarly(g); }
+  else if (b.type === 'penaltyVote') ok = E.doPenaltyVote(g, seat, !!b.agree);
   if (!ok) return json(res, 409, { error: 'That move is not allowed right now' });
   afterChange(room);
   return json(res, 200, { ok: true });
@@ -331,7 +355,7 @@ const server = http.createServer((req, res) => {
   if (file.startsWith(PUBLIC + path.sep) && type) {
     fs.readFile(file, (err, data) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
-      const h = { 'Content-Type': type, 'Cache-Control': rel === 'sw.js' || rel === 'index.html' || rel === 'manifest.webmanifest' ? 'no-cache' : 'public, max-age=86400', 'Permissions-Policy': 'camera=(self), microphone=(self), display-capture=(), geolocation=(), payment=(), usb=()' };
+      const h = { 'Content-Type': type, 'Cache-Control': rel === 'sw.js' || rel === 'index.html' || rel === 'manifest.webmanifest' ? 'no-cache' : 'public, max-age=86400' };
       if (rel === 'sw.js') h['Service-Worker-Allowed'] = '/';
       res.writeHead(200, h); res.end(data);
     });

@@ -76,7 +76,7 @@ function startRound(g) {
   g.hands = [];
   for (let i = 0; i < n; i++) g.hands.push(sortHand(d.slice(i * per, (i + 1) * per)));
   g.taken = Array(n).fill(0);
-  g.bid = { amount: 0, by: null, passed: Array(n).fill(false), last: Array(n).fill(''), turn: (g.dealer + 1) % n, finalBidUsed: false };
+  g.bid = { amount: 0, by: null, passed: Array(n).fill(false), last: Array(n).fill(''), turn: (g.dealer + 1) % n };
   g.bidder = null; g.trump = null; g.called = []; g.seen = {};
   g.team = new Set(); g.revealed = new Set();
   g.trick = []; g.turn = null; g.winner = null; g.trickPts = 0; g.result = null;
@@ -94,14 +94,7 @@ function settleBid(g) {
   else if (b.amount > 0 && b.turn === b.by) winner = b.by;
   if (winner !== null) {
     if (!b.amount) { b.amount = g.minBid; b.by = winner; b.last[winner] = String(g.minBid); }
-    g.bidder = winner;
-    // When all other players have passed, give the winning bidder one final
-    // optional chance to raise their own bid before choosing trump/partners.
-    if (b.amount < g.maxCap && !b.finalBidUsed) {
-      g.phase = 'finalBid'; g.turn = winner;
-    } else {
-      g.phase = 'call'; g.turn = winner;
-    }
+    g.bidder = winner; g.phase = 'call'; g.turn = winner;
   }
 }
 function advanceBid(g) {
@@ -124,23 +117,6 @@ function doPass(g, i) {
   b.passed[i] = true; b.last[i] = 'Pass';
   advanceBid(g); return true;
 }
-function doFinalBid(g, i, a) {
-  const b = g.bid;
-  if (g.phase !== 'finalBid' || g.bidder !== i || b.finalBidUsed) return false;
-  const min = b.amount + 5;
-  if (!Number.isInteger(a) || a < min || a > g.maxCap || a % 5 !== 0) return false;
-  b.amount = a; b.by = i; b.last[i] = String(a); b.finalBidUsed = true;
-  g.phase = 'call'; g.turn = i;
-  return true;
-}
-function keepFinalBid(g, i) {
-  const b = g.bid;
-  if (g.phase !== 'finalBid' || g.bidder !== i || b.finalBidUsed) return false;
-  b.finalBidUsed = true;
-  g.phase = 'call'; g.turn = i;
-  return true;
-}
-
 function botBid(g, i) { // returns an amount, or 0 to pass
   const b = g.bid, next = b.amount ? b.amount + 5 : g.minBid, mx = g.maxBid[i];
   if (mx < next) return 0;
@@ -177,24 +153,16 @@ function botCall(g) {
 function doCall(g, i, trump, called) {
   if (g.phase !== 'call' || g.bidder !== i) return false;
   if (SUITS.indexOf(trump) < 0 || !Array.isArray(called) || called.length !== g.pc) return false;
-  const seenF = {};
+  const seenKey = {}; // duplicate (face, occurrence) pairs are rejected, but the same face can be called twice as its two occurrences ("both copies")
   for (const c of called) {
     if (!c || typeof c.f !== 'string') return false;
-    const total = copiesOf(g, c.f);
-    if (!total) return false;
-    if (g.hands[i].filter(h => h.f === c.f).length >= total) return false;
     if (!(c.n === 1 || (c.n === 2 && g.decks === 2))) return false;
-    seenF[c.f] = (seenF[c.f] || []).concat(c.n);
-  }
-  for (const f of Object.keys(seenF)) {
-    const ns = seenF[f];
-    if (new Set(ns).size !== ns.length) return false;
-    // In a two-deck game the bidder may call both physical copies of the
-    // same card, but only when neither copy is already in the bidder's hand.
-    if (ns.length > 1) {
-      if (g.decks !== 2 || ns.length !== 2 || ns.indexOf(1) < 0 || ns.indexOf(2) < 0) return false;
-      if (g.hands[i].some(h => h.f === f)) return false;
-    }
+    const key = c.f + ':' + c.n;
+    if (seenKey[key]) return false;
+    seenKey[key] = 1;
+    const total = copiesOf(g, c.f);
+    if (!total || c.n > total) return false;
+    if (g.hands[i].filter(h => h.f === c.f).length >= total) return false;
   }
   g.trump = trump;
   g.called = called.map(c => ({
@@ -251,48 +219,70 @@ function clearTrick(g) {
   if (!g.hands[0].length) { endRound(g); return; }
   g.phase = 'play'; g.turn = g.winner;
 }
-// The bidder can finish early only after every partner has been revealed
-// and the bidding side cannot possibly reach the bid, even if it receives
-// every remaining point.
+const PENALTY_MIN_BID = 345;
+const PENALTY_SCORE = -500;
+
+function computeResult(g) {
+  const team = Array.from(g.team), tp = sum(team, i => g.taken[i]);
+  const ok = tp >= g.bid.amount, delta = Array(g.n).fill(0);
+  team.forEach(i => { delta[i] = ok ? (i === g.bidder ? 2 * g.bid.amount : g.bid.amount) : (i === g.bidder ? -g.bid.amount : 0); });
+  if (!ok) for (let i = 0; i < g.n; i++) if (!g.team.has(i)) delta[i] = g.bid.amount; // opponents gain the bid
+  return { tp, ok, delta, team };
+}
+function applyResult(g, res) {
+  res.delta.forEach((d, i) => { g.scores[i] += d; });
+  g.result = res; g.phase = 'end'; g.turn = null; g.penalty = null;
+}
 function canEndEarly(g) {
-  if (g.phase !== 'play' && g.phase !== 'trickEnd') return false;
-  if (g.bidder === null || !g.called.length) return false;
-  if (!g.called.every(c => c.by !== undefined)) return false;
-  const team = new Set(g.team);
-  const tp = sum(Array.from(team), i => g.taken[i]);
-  const takenTotal = sum(g.taken, x => x);
-  const remainingPoints = g.total - takenTotal;
-  return tp < g.bid.amount && tp + remainingPoints < g.bid.amount;
+  if (!g || (g.phase !== 'play' && g.phase !== 'trickEnd')) return false;
+  if (g.bidder === null || !g.called || g.team.size < g.pc + 1) return false;
+  const teamTaken = sum(Array.from(g.team), i => g.taken[i]);
+  const remaining = sum(g.hands.flat(), pts) + sum(g.trick, e => pts(e.card));
+  return teamTaken + remaining < g.bid.amount;
+}
+
+function endEarly(g) {
+  if (!canEndEarly(g)) return false;
+  endRound(g);
+  return true;
 }
 
 function endRound(g) {
-  const team = Array.from(g.team), tp = sum(team, i => g.taken[i]);
-  const ok = tp >= g.bid.amount, delta = Array(g.n).fill(0);
-
-  // If both called partner cards are revealed/played by the same non-bidder,
-  // that player is a double partner and receives the bidder's 2x bid reward
-  // when the bidding side wins.
-  const partnerHits = {};
-  g.called.forEach(c => {
-    if (c.by !== undefined && c.by !== g.bidder) partnerHits[c.by] = (partnerHits[c.by] || 0) + 1;
-  });
-  const doublePartners = new Set(Object.keys(partnerHits)
-    .filter(i => partnerHits[i] >= 2)
-    .map(Number));
-
-  team.forEach(i => {
-    const winningPoints = i === g.bidder || doublePartners.has(i) ? 2 * g.bid.amount : g.bid.amount;
-    delta[i] = ok ? winningPoints : (i === g.bidder ? -g.bid.amount : 0);
-    g.scores[i] += delta[i];
-  });
-  if (!ok) for (let i = 0; i < g.n; i++) if (!g.team.has(i)) { delta[i] = g.bid.amount; g.scores[i] += delta[i]; } // opponents gain the bid
-  g.result = { tp, ok, delta, team, doublePartners: Array.from(doublePartners) };
-  g.phase = 'end'; g.turn = null;
+  const res = computeResult(g);
+  const partners = res.team.filter(i => i !== g.bidder);
+  if (!res.ok && g.bid.amount >= PENALTY_MIN_BID && partners.length) {
+    g.penalty = { res, partners, votes: {} };
+    g.phase = 'penalty'; g.turn = null;
+  } else {
+    applyResult(g, res);
+  }
 }
+function resolvePenalty(g) {
+  const p = g.penalty;
+  if (!p) return;
+  const votes = p.partners.map(i => p.votes[i]);
+  if (votes.some(v => v === false)) { applyResult(g, Object.assign({}, p.res, { penaltyOffered: true, penaltyApplied: false })); return; }
+  if (votes.every(v => v === true)) {
+    const delta = p.res.delta.slice();
+    delta[g.bidder] = PENALTY_SCORE;
+    applyResult(g, Object.assign({}, p.res, { delta, penaltyOffered: true, penaltyApplied: true }));
+  }
+}
+function doPenaltyVote(g, i, agree) {
+  const p = g.penalty;
+  if (g.phase !== 'penalty' || !p || p.partners.indexOf(i) < 0 || p.votes[i] !== undefined) return false;
+  p.votes[i] = !!agree;
+  resolvePenalty(g);
+  return true;
+}
+function pendingPenaltyVoters(g) {
+  if (g.phase !== 'penalty' || !g.penalty) return [];
+  return g.penalty.partners.filter(i => g.penalty.votes[i] === undefined);
+}
+function botPenaltyVote() { return false; } // a computer player protects its teammate and declines
 
 function whoActs(g) {
   if (g.phase === 'bid') return g.bid.turn;
-  if (g.phase === 'finalBid') return g.bidder;
   if (g.phase === 'call') return g.bidder;
   if (g.phase === 'play') return g.turn;
   return null;
@@ -340,6 +330,7 @@ function chooseCard(g, i) {
 }
 
 module.exports = {
-  pts, newGame, startRound, doBid, doPass, doCall, doPlay, clearTrick, endRound, canEndEarly, whoActs, legal,
-  botBid, doFinalBid, keepFinalBid, botCall, chooseCard, holdsCalled, copiesOf
+  pts, newGame, startRound, doBid, doPass, doCall, doPlay, clearTrick, whoActs, legal,
+  botBid, botCall, chooseCard, holdsCalled, copiesOf, endRound, canEndEarly, endEarly,
+  PENALTY_MIN_BID, PENALTY_SCORE, doPenaltyVote, pendingPenaltyVoters, botPenaltyVote
 };
