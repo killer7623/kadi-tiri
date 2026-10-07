@@ -76,7 +76,7 @@ function startRound(g) {
   g.hands = [];
   for (let i = 0; i < n; i++) g.hands.push(sortHand(d.slice(i * per, (i + 1) * per)));
   g.taken = Array(n).fill(0);
-  g.bid = { amount: 0, by: null, passed: Array(n).fill(false), last: Array(n).fill(''), turn: (g.dealer + 1) % n, finalBidUsed: false };
+  g.bid = { amount: 0, by: null, passed: Array(n).fill(false), last: Array(n).fill(''), turn: (g.dealer + 1) % n };
   g.bidder = null; g.trump = null; g.called = []; g.seen = {};
   g.team = new Set(); g.revealed = new Set();
   g.trick = []; g.turn = null; g.winner = null; g.trickPts = 0; g.result = null;
@@ -94,14 +94,7 @@ function settleBid(g) {
   else if (b.amount > 0 && b.turn === b.by) winner = b.by;
   if (winner !== null) {
     if (!b.amount) { b.amount = g.minBid; b.by = winner; b.last[winner] = String(g.minBid); }
-    g.bidder = winner;
-    // When all other players have passed, give the winning bidder one final
-    // optional chance to raise their own bid before choosing trump/partners.
-    if (b.amount < g.maxCap && !b.finalBidUsed) {
-      g.phase = 'finalBid'; g.turn = winner;
-    } else {
-      g.phase = 'call'; g.turn = winner;
-    }
+    g.bidder = winner; g.phase = 'call'; g.turn = winner;
   }
 }
 function advanceBid(g) {
@@ -124,23 +117,6 @@ function doPass(g, i) {
   b.passed[i] = true; b.last[i] = 'Pass';
   advanceBid(g); return true;
 }
-function doFinalBid(g, i, a) {
-  const b = g.bid;
-  if (g.phase !== 'finalBid' || g.bidder !== i || b.finalBidUsed) return false;
-  const min = b.amount + 5;
-  if (!Number.isInteger(a) || a < min || a > g.maxCap || a % 5 !== 0) return false;
-  b.amount = a; b.by = i; b.last[i] = String(a); b.finalBidUsed = true;
-  g.phase = 'call'; g.turn = i;
-  return true;
-}
-function keepFinalBid(g, i) {
-  const b = g.bid;
-  if (g.phase !== 'finalBid' || g.bidder !== i || b.finalBidUsed) return false;
-  b.finalBidUsed = true;
-  g.phase = 'call'; g.turn = i;
-  return true;
-}
-
 function botBid(g, i) { // returns an amount, or 0 to pass
   const b = g.bid, next = b.amount ? b.amount + 5 : g.minBid, mx = g.maxBid[i];
   if (mx < next) return 0;
@@ -264,6 +240,11 @@ function canEndEarly(g) {
   const remainingPoints = g.total - takenTotal;
   return tp < g.bid.amount && tp + remainingPoints < g.bid.amount;
 }
+function doEndEarly(g, i) {
+  if (i !== g.bidder || !canEndEarly(g)) return false;
+  endRound(g);
+  return true;
+}
 
 function endRound(g) {
   const team = Array.from(g.team), tp = sum(team, i => g.taken[i]);
@@ -292,7 +273,6 @@ function endRound(g) {
 
 function whoActs(g) {
   if (g.phase === 'bid') return g.bid.turn;
-  if (g.phase === 'finalBid') return g.bidder;
   if (g.phase === 'call') return g.bidder;
   if (g.phase === 'play') return g.turn;
   return null;
@@ -340,6 +320,6 @@ function chooseCard(g, i) {
 }
 
 module.exports = {
-  pts, newGame, startRound, doBid, doPass, doCall, doPlay, clearTrick, endRound, canEndEarly, whoActs, legal,
-  botBid, doFinalBid, keepFinalBid, botCall, chooseCard, holdsCalled, copiesOf
+  pts, newGame, startRound, doBid, doPass, doCall, doPlay, clearTrick, endRound, canEndEarly, doEndEarly, whoActs, legal,
+  botBid, botCall, chooseCard, holdsCalled, copiesOf
 };
